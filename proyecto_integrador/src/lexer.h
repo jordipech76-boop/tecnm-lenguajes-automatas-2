@@ -1,42 +1,33 @@
-/* lexer.h - analizador lexico de Lenguajito.
- *
- * Convierte el texto de un programa .lj en una lista de tokens,
- * cada uno con su linea y columna (empiezan en 1).
- */
+/* lexer.h - analizador lexico de Lenguajito (docs/gramatica.md, seccion 2). */
 #ifndef LEXER_H
 #define LEXER_H
 
+#include <stdbool.h>
+#include <stddef.h>
+
 typedef enum {
-    TOK_KW,      /* int, if, else, while, print */
-    TOK_ID,      /* identificadores */
-    TOK_NUM,     /* enteros sin signo */
-    TOK_OP,      /* + - * / < <= > >= == != = */
-    TOK_DELIM,   /* ( ) { } ; */
-    TOK_EOF      /* fin de archivo */
-} TipoToken;
+    TOK_KW,     /* int, if, else, while, print */
+    TOK_ID,     /* identificadores */
+    TOK_NUM,    /* literales enteros */
+    TOK_OP,     /* + - * / < <= > >= == != = */
+    TOK_DELIM,  /* ( ) { } ; */
+    TOK_EOF,    /* fin de archivo */
+    TOK_ERROR   /* caracter invalido (error lexico S01) */
+} TokenType;
 
 typedef struct {
-    TipoToken tipo;
-    char lexema[64];
-    int linea;
-    int columna;
+    TokenType type;
+    char *lexeme;
+    int line;
+    int col;
 } Token;
 
-typedef struct {
-    Token *datos;     /* arreglo dinamico de tokens */
-    int cantidad;
-    int capacidad;
-    int errores;      /* cuantos errores S01 se encontraron */
-} ListaTokens;
+/* Escanea todo el codigo fuente y devuelve un arreglo de tokens que
+ * termina en TOK_EOF. Si print_tokens es true imprime "linea:columna TIPO
+ * lexema" (modo --tokens) y los errores S01 en stdout. */
+Token *lexer_scan_all(const char *filename, const char *src, size_t *out_count,
+                      bool print_tokens, int *out_lex_errors);
 
-/* Tokeniza `fuente`. Los errores lexicos se imprimen en stdout con el
- * formato archivo:linea:columna: error S01: mensaje */
-void tokenizar(const char *ruta, const char *fuente, ListaTokens *lista);
-
-/* Nombre del tipo para --tokens: "KW", "ID", "NUM", "OP", "DELIM", "EOF" */
-const char *nombre_tipo_token(TipoToken t);
-
-/* Libera la memoria de la lista */
-void liberar_tokens(ListaTokens *lista);
+void lexer_free_tokens(Token *tokens, size_t count);
 
 #endif /* LEXER_H */

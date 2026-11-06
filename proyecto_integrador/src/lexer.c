@@ -1,4 +1,4 @@
-/* lexer.c - analizador lexico de Lenguajito (ver docs/gramatica.md, seccion 2). */
+/* lexer.c - analizador lexico de Lenguajito (docs/gramatica.md, seccion 2). */
 #include "lexer.h"
 
 #include <ctype.h>
@@ -6,116 +6,23 @@
 #include <stdlib.h>
 #include <string.h>
 
-static const char *const PALABRAS_RESERVADAS[] = {
-    "int", "if", "else", "while", "print"
-};
-
-/* Agrega un token al final de la lista, creciendo el arreglo si hace falta */
-static void agregar(ListaTokens *lista, TipoToken tipo, const char *inicio,
-                    int largo, int linea, int columna) {
-    if (lista->cantidad == lista->capacidad) {
-        int nueva = (lista->capacidad == 0) ? 64 : lista->capacidad * 2;
-        Token *mas = realloc(lista->datos, (size_t)nueva * sizeof *mas);
-        if (mas == NULL) {
-            fprintf(stderr, "sin memoria para tokens\n");
-            exit(1);
-        }
-        lista->datos = mas;
-        lista->capacidad = nueva;
-    }
-    Token *t = &lista->datos[lista->cantidad++];
-    t->tipo = tipo;
-    if (largo > (int)sizeof t->lexema - 1) {
-        largo = (int)sizeof t->lexema - 1;   /* lexema muy largo: se corta */
-    }
-    memcpy(t->lexema, inicio, (size_t)largo);
-    t->lexema[largo] = '\0';
-    t->linea = linea;
-    t->columna = columna;
+static char *slice_str(const char *start, size_t len) {
+    char *s = (char *)malloc(len + 1);
+    if (!s) exit(2);
+    memcpy(s, start, len);
+    s[len] = '\0';
+    return s;
 }
 
-static int es_reservada(const char *inicio, int largo) {
-    for (size_t i = 0; i < sizeof PALABRAS_RESERVADAS / sizeof PALABRAS_RESERVADAS[0]; i++) {
-        const char *p = PALABRAS_RESERVADAS[i];
-        if ((int)strlen(p) == largo && strncmp(p, inicio, (size_t)largo) == 0) {
-            return 1;
-        }
-    }
-    return 0;
+static bool is_keyword(const char *s) {
+    return strcmp(s, "int") == 0   ||
+           strcmp(s, "if") == 0    ||
+           strcmp(s, "else") == 0  ||
+           strcmp(s, "while") == 0 ||
+           strcmp(s, "print") == 0;
 }
 
-void tokenizar(const char *ruta, const char *fuente, ListaTokens *lista) {
-    lista->datos = NULL;
-    lista->cantidad = 0;
-    lista->capacidad = 0;
-    lista->errores = 0;
-
-    const char *p = fuente;
-    int linea = 1, columna = 1;
-
-    while (*p != '\0') {
-        char c = *p;
-
-        /* espacios, tabuladores y saltos de linea se ignoran */
-        if (c == '\n') { linea++; columna = 1; p++; continue; }
-        if (c == ' ' || c == '\t' || c == '\r') { columna++; p++; continue; }
-
-        /* comentario // hasta el final de la linea */
-        if (c == '/' && p[1] == '/') {
-            while (*p != '\0' && *p != '\n') { p++; columna++; }
-            continue;
-        }
-
-        const char *inicio = p;
-        int col_inicio = columna;
-
-        /* identificador o palabra reservada: [a-zA-Z_][a-zA-Z0-9_]* */
-        if (isalpha((unsigned char)c) || c == '_') {
-            while (isalnum((unsigned char)*p) || *p == '_') { p++; columna++; }
-            int largo = (int)(p - inicio);
-            agregar(lista, es_reservada(inicio, largo) ? TOK_KW : TOK_ID,
-                    inicio, largo, linea, col_inicio);
-            continue;
-        }
-
-        /* entero sin signo: [0-9]+ */
-        if (isdigit((unsigned char)c)) {
-            while (isdigit((unsigned char)*p)) { p++; columna++; }
-            agregar(lista, TOK_NUM, inicio, (int)(p - inicio), linea, col_inicio);
-            continue;
-        }
-
-        /* operadores de dos caracteres: <= >= == != */
-        if ((c == '<' || c == '>' || c == '=' || c == '!') && p[1] == '=') {
-            agregar(lista, TOK_OP, inicio, 2, linea, col_inicio);
-            p += 2; columna += 2;
-            continue;
-        }
-
-        /* operadores de un caracter: + - * / < > = */
-        if (strchr("+-*/<>=", c) != NULL) {
-            agregar(lista, TOK_OP, inicio, 1, linea, col_inicio);
-            p++; columna++;
-            continue;
-        }
-
-        /* delimitadores: ( ) { } ; */
-        if (strchr("(){};", c) != NULL) {
-            agregar(lista, TOK_DELIM, inicio, 1, linea, col_inicio);
-            p++; columna++;
-            continue;
-        }
-
-        /* cualquier otra cosa es un error lexico (incluye un '!' solo) */
-        printf("%s:%d:%d: error S01: caracter invalido '%c'\n", ruta, linea, columna, c);
-        lista->errores++;
-        p++; columna++;
-    }
-
-    agregar(lista, TOK_EOF, "", 0, linea, columna);
-}
-
-const char *nombre_tipo_token(TipoToken t) {
+static const char *token_type_str(TokenType t) {
     switch (t) {
         case TOK_KW:    return "KW";
         case TOK_ID:    return "ID";
@@ -123,13 +30,133 @@ const char *nombre_tipo_token(TipoToken t) {
         case TOK_OP:    return "OP";
         case TOK_DELIM: return "DELIM";
         case TOK_EOF:   return "EOF";
+        default:        return "ERROR";
     }
-    return "?";
 }
 
-void liberar_tokens(ListaTokens *lista) {
-    free(lista->datos);
-    lista->datos = NULL;
-    lista->cantidad = 0;
-    lista->capacidad = 0;
+static void push_token(Token **arr, size_t *count, size_t *cap, TokenType type, char *lexeme, int line, int col) {
+    if (*count >= *cap) {
+        *cap = (*cap == 0) ? 64 : (*cap * 2);
+        *arr = (Token *)realloc(*arr, (*cap) * sizeof(Token));
+        if (!*arr) exit(2);
+    }
+    (*arr)[*count].type = type;
+    (*arr)[*count].lexeme = lexeme;
+    (*arr)[*count].line = line;
+    (*arr)[*count].col = col;
+    (*count)++;
+}
+
+Token *lexer_scan_all(const char *filename, const char *src, size_t *out_count, bool print_tokens, int *out_lex_errors) {
+    Token *tokens = NULL;
+    size_t count = 0, cap = 0;
+    int line = 1, col = 1;
+    int errors = 0;
+    size_t i = 0;
+
+    while (src[i] != '\0') {
+        char c = src[i];
+
+        /* 1. Espacios y saltos de línea */
+        if (c == ' ' || c == '\t' || c == '\r') {
+            i++; col++;
+            continue;
+        }
+        if (c == '\n') {
+            i++; line++; col = 1;
+            continue;
+        }
+
+        /* 2. Comentarios de línea // */
+        if (c == '/' && src[i + 1] == '/') {
+            while (src[i] != '\0' && src[i] != '\n') {
+                i++; col++;
+            }
+            continue;
+        }
+
+        int start_line = line;
+        int start_col = col;
+
+        /* 3. Identificadores y palabras reservadas */
+        if (isalpha((unsigned char)c) || c == '_') {
+            size_t start = i;
+            while (isalnum((unsigned char)src[i]) || src[i] == '_') {
+                i++; col++;
+            }
+            char *lex = slice_str(src + start, i - start);
+            TokenType t = is_keyword(lex) ? TOK_KW : TOK_ID;
+            if (print_tokens) printf("%d:%d %s %s\n", start_line, start_col, token_type_str(t), lex);
+            push_token(&tokens, &count, &cap, t, lex, start_line, start_col);
+            continue;
+        }
+
+        /* 4. Enteros sin signo */
+        if (isdigit((unsigned char)c)) {
+            size_t start = i;
+            while (isdigit((unsigned char)src[i])) {
+                i++; col++;
+            }
+            char *lex = slice_str(src + start, i - start);
+            if (print_tokens) printf("%d:%d NUM %s\n", start_line, start_col, lex);
+            push_token(&tokens, &count, &cap, TOK_NUM, lex, start_line, start_col);
+            continue;
+        }
+
+        /* 5. Operadores de 2 caracteres: <=, >=, ==, != */
+        if ((c == '<' && src[i + 1] == '=') ||
+            (c == '>' && src[i + 1] == '=') ||
+            (c == '=' && src[i + 1] == '=') ||
+            (c == '!' && src[i + 1] == '=')) {
+            char *lex = slice_str(src + i, 2);
+            i += 2; col += 2;
+            if (print_tokens) printf("%d:%d OP %s\n", start_line, start_col, lex);
+            push_token(&tokens, &count, &cap, TOK_OP, lex, start_line, start_col);
+            continue;
+        }
+
+        /* 6. Operadores de 1 carácter: + - * / < > = */
+        if (strchr("+-*/<>=", c) != NULL) {
+            char *lex = slice_str(src + i, 1);
+            i++; col++;
+            if (print_tokens) printf("%d:%d OP %s\n", start_line, start_col, lex);
+            push_token(&tokens, &count, &cap, TOK_OP, lex, start_line, start_col);
+            continue;
+        }
+
+        /* 7. Delimitadores: ( ) { } ; */
+        if (strchr("(){};", c) != NULL) {
+            char *lex = slice_str(src + i, 1);
+            i++; col++;
+            if (print_tokens) printf("%d:%d DELIM %s\n", start_line, start_col, lex);
+            push_token(&tokens, &count, &cap, TOK_DELIM, lex, start_line, start_col);
+            continue;
+        }
+
+        /* 8. Cualquier otra cosa es error léxico S01 */
+        char *bad = slice_str(src + i, 1);
+        i++; col++;
+        errors++;
+        if (print_tokens) {
+            printf("%s:%d:%d: error S01: carácter inválido '%s'\n", filename, start_line, start_col, bad);
+        }
+        push_token(&tokens, &count, &cap, TOK_ERROR, bad, start_line, start_col);
+    }
+
+    if (print_tokens) {
+        printf("%d:%d EOF\n", line, col);   /* una sola linea al final */
+    }
+    push_token(&tokens, &count, &cap, TOK_EOF, slice_str("EOF", 3), line, col);
+
+    *out_count = count;
+    if (out_lex_errors) *out_lex_errors = errors;
+    return tokens;
+}
+
+void lexer_free_tokens(Token *tokens, size_t count) {
+    if (!tokens) return;
+    for (size_t i = 0; i < count; i++) {
+        free(tokens[i].lexeme);
+    }
+    free(tokens);
 }
