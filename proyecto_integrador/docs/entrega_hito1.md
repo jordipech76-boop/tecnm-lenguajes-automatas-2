@@ -3,7 +3,7 @@
 **Equipo:** José Manuel, Oscar Mauricio, María Jesús, Jordi Geovany y Héctor Iván  
 **Repositorio:** https://github.com/jordipech76-boop/tecnm-lenguajes-automatas-2  
 **Tag:** `v0.1-hito1`  
-**Fecha:** [AAAA-MM-DD]
+**Fecha:** [2026-11-05]
 
 ---
 
