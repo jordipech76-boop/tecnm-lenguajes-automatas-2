@@ -60,7 +60,4 @@ Pruebas propias en `tests/propias/` (detalle en su `README.md`):
 | Con un carácter inválido en medio de una expresión salían dos `S01` en el mismo lugar y ninguno decía cuál carácter | — | Un diagnóstico claro por error | — | **Corregido:** se agregó `report_invalid_char()` en `parser.c`, que reporta una vez el carácter (`'@'`) y lo salta. |
 | Los tipos de token estaban en `ast.h` y la semántica dentro de `parser.c` | — | `PROYECTO.md` pide separar las etapas para poder explicarlas y probarlas por separado | — | **Modificado:** se separó en `lexer.h`, `parser.c` y `semantica.c` sin cambiar el comportamiento. |
 
-## 6. Demo
 
-- [ ] Preparada para 3 minutos.
-- [ ] Cualquier integrante puede explicar cualquier parte.
