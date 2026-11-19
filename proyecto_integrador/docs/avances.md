@@ -2,7 +2,7 @@
 
 **Equipo:** José Manuel, Oscar Mauricio, María Jesús, Jordi Geovany y Héctor Iván  
 **Repositorio:** https://github.com/jordipech76-boop/tecnm-lenguajes-automatas-2  
-**Tag actual:** ninguno todavía (el primero será `v0.1-hito1`)
+**Tag actual:** `v0.1-hito1`
 
 Completa una sección antes de cada clase de avance. Tres bullets y el commit.
 
@@ -28,10 +28,10 @@ Completa una sección antes de cada clase de avance. Tres bullets y el commit.
 
 ## Avance 2 · Sesión 15
 
-1. **Qué compila hoy** (comando exacto):
-2. **Qué falla y por qué**:
-3. **Qué sigue**:
-4. **Commit**:
+1. **Qué compila hoy** (comando exacto): `make`; `./lenguajito tests/propias/valido3.lj --ast` imprime el árbol completo con `if/else`, `while` y una variable declarada dentro de un bloque, y `./lenguajito tests/propias/invalido2.lj --check` reporta `E01`, `E02` y `E04` en una sola pasada usando la tabla de símbolos con ámbitos anidados.
+2. **Qué falla y por qué**: `--run` todavía responde "sin implementar", así que las pruebas de `tests/validos/` no pasan. Además, la inicialización no sigue el flujo del programa: una asignación dentro de un `if` marca la variable como inicializada aunque el `if` no se cumpla.
+3. **Qué sigue**: un intérprete que recorra el AST para `--run` (valores por ámbito, comparaciones que dan 1 o 0 y `print`), para tener `make test-hito2` en verde en la sesión 20.
+4. **Commit**: `79864aa`
 
 ---
 
