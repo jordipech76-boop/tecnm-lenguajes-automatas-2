@@ -22,6 +22,7 @@ typedef struct ASTNode {
     int col;
     char *text;             /* nombre de variable u operador binario */
     int num_val;            /* valor para AST_NUM */
+    int con_error;          /* 1 si la declaración tuvo error de sintaxis (Hito 2) */
     struct ASTNode *left;   /* expr izq, condicion o valor a asignar */
     struct ASTNode *right;  /* expr der, cuerpo entonces o cuerpo mientras */
     struct ASTNode *extra;  /* lista de hijos en PROGRAMA/BLOQUE o rama si_no */
