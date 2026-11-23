@@ -230,19 +230,26 @@ static ASTNode *parse_declaracion(Parser *p) {
         return NULL;
     }
 
+    /* Hito 2: desde aquí el nombre ya se leyó. Si algo falla, no se descarta
+     * la declaración: se devuelve marcada con_error para que la semántica
+     * registre la variable y no salga un E01 en cascada. */
     ASTNode *init_expr = NULL;
     if (match_lexeme(p, TOK_OP, "=")) {
         init_expr = parse_expresion(p);
         if (!init_expr) {
             synchronize(p);
-            return NULL;
+            ASTNode *bad = ast_new_declarar(id->lexeme, NULL, kw->line, kw->col);
+            bad->con_error = 1;
+            return bad;
         }
     }
 
     if (!expect(p, TOK_DELIM, ";", "se esperaba ';' al final de la declaración")) {
         ast_free(init_expr);
         synchronize(p);
-        return NULL;
+        ASTNode *bad = ast_new_declarar(id->lexeme, NULL, kw->line, kw->col);
+        bad->con_error = 1;
+        return bad;
     }
 
     return ast_new_declarar(id->lexeme, init_expr, kw->line, kw->col);
