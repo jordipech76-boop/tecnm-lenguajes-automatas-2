@@ -1,7 +1,7 @@
 /* compilador.c - punto de entrada del compilador.
  *
  * Hecho (Hito 1): --tokens, --ast y --check (S01, E01, E02, E04).
- * TODO (Hito 2): --run interpretando el AST.
+ * Hecho (Hito 2): --run interpretando el AST (interprete.c).
  * TODO (Hito 3): generar TAC y optimizarlo.
  * TODO (Hito 4): generar ensamblador, ensamblar, enlazar y ejecutar.
  */
@@ -13,6 +13,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "semantica.h"
+#include "interprete.h"
 
 /* Lee el archivo completo en memoria. Devuelve NULL si no se pudo abrir. */
 static char *leer_archivo(const char *ruta) {
@@ -62,6 +63,15 @@ int compilar(const char *ruta, const char *modo) {
         } else if (strcmp(modo, "--check") == 0) {
             int total = sema_check_program(ruta, raiz, errores_sintaxis);
             resultado = (total > 0) ? 1 : 0;
+        } else if (strcmp(modo, "--run") == 0) {
+            /* Hito 2: primero la misma revision de --check. Si hay errores
+             * se imprimen y no se ejecuta nada. */
+            int total = sema_check_program(ruta, raiz, errores_sintaxis);
+            if (total > 0) {
+                resultado = 1;
+            } else {
+                resultado = interpretar(raiz);
+            }
         } else {
             fprintf(stderr, "%s: modo %s todavia sin implementar\n", ruta, modo);
             resultado = 1;
