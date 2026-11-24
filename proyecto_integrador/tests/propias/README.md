@@ -32,3 +32,21 @@ Para comprobar una (desde `proyecto_integrador/`):
 ```bash
 ./lenguajito tests/propias/run1.lj --run | diff - tests/propias/run1.out && echo OK
 ```
+
+## Flujo y recuperación de errores (Hito 2)
+
+Prueban la inicialización sensible al flujo de `semantica.c` y que un error de sintaxis en una declaración ya no provoque un `E01` en cascada. Todas empiezan con `int x = 5;`.
+
+| Archivo | Qué cubre | Salida esperada |
+| :--- | :--- | :--- |
+| `invalido3.lj` | `if` sin `else`: lo asignado adentro no cuenta después (`E01`) | `invalido3.check` |
+| `invalido4.lj` | `while`: lo asignado en el cuerpo no cuenta después del ciclo (`E01`) | `invalido4.check` |
+| `invalido5.lj` | `int z = 5 # 2;` y luego `print(z)`: solo el `S01` del `#`, sin `E01` de más | `invalido5.check` |
+| `valido4.lj` | `if/else` que asigna en las dos ramas: `--check` sin errores y `--run` imprime `1` | `valido4.out` |
+
+Para comprobarlas (desde `proyecto_integrador/`):
+
+```bash
+./lenguajito tests/propias/invalido3.lj --check | diff - tests/propias/invalido3.check && echo OK
+./lenguajito tests/propias/valido4.lj --run | diff - tests/propias/valido4.out && echo OK
+```
